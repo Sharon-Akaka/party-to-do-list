@@ -49,7 +49,6 @@
 <body>
 <div class="wrap">
   <h1>🇬🇧 Party prep checklist</h1>
-  <div class="meta">Sharon & family's citizenship celebration</div>
   <div class="status loading" id="status">Connecting...</div>
   <div class="prog-track"><div class="prog-fill" id="pf" style="width:0%"></div></div>
   <div class="prog-label" id="pl">Loading...</div>
@@ -361,7 +360,7 @@ async function init() {
       .map(item => ({ id: item.id, done: false, deleted: false, text: item.t, note: item.n || '' }));
     if (toInsert.length > 0) await db.from('checklist').insert(toInsert);
     (data || []).forEach(row => applyRow(row));
-    setStatus('● Live — changes sync with your brother instantly', 'ok');
+    setStatus('● Live changes synced', 'ok');
   }
 
   db.channel('checklist-changes')
@@ -369,7 +368,7 @@ async function init() {
       if (payload.new) applyRow(payload.new);
     })
     .subscribe(status => {
-      if (status === 'SUBSCRIBED') setStatus('● Live — changes sync with your brother instantly', 'ok');
+      if (status === 'SUBSCRIBED') setStatus('● Live changes synced', 'ok');
       if (status === 'CLOSED') setStatus('Disconnected — reload to reconnect', 'err');
     });
 }
