@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Party Prep 🇬🇧</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9f9f9; color: #111; font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 600px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 2px; }
+  .meta { font-size: 13px; color: #888; margin-bottom: 6px; }
+  .status { font-size: 12px; height: 16px; margin-bottom: 10px; }
+  .status.ok { color: #2a9d5c; }
+  .status.err { color: #e55; }
+  .status.loading { color: #aaa; }
+  .prog-track { height: 5px; background: #e5e5e5; border-radius: 99px; overflow: hidden; margin-bottom: 4px; }
+  .prog-fill { height: 100%; background: #2a9d5c; border-radius: 99px; transition: width .3s; }
+  .prog-label { font-size: 12px; color: #888; margin-bottom: 28px; }
+  .section { margin-bottom: 32px; }
+  .section-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #555; border-bottom: 1px solid #e5e5e5; padding-bottom: 6px; margin-bottom: 4px; }
+  .group { margin-top: 14px; }
+  .group-label { font-size: 12px; color: #999; margin-bottom: 5px; }
+  .store-tag { display: inline-block; font-size: 11px; background: #edf6ff; color: #2563eb; border-radius: 4px; padding: 1px 7px; margin-bottom: 5px; }
+  .item { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f0f0f0; }
+  .item:last-of-type { border-bottom: none; }
+  .cb { width: 18px; height: 18px; min-width: 18px; border: 1.5px solid #ccc; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 2px; transition: all .12s; background: #fff; flex-shrink: 0; }
+  .cb.checked { background: #2a9d5c; border-color: #2a9d5c; }
+  .cb svg { opacity: 0; }
+  .cb.checked svg { opacity: 1; }
+  .item-body { flex: 1; cursor: pointer; min-width: 0; }
+  .item.checked-item .item-text { text-decoration: line-through; color: #bbb; }
+  .item-text { font-size: 14px; color: #111; }
+  .item-note { font-size: 12px; color: #aaa; margin-top: 1px; }
+  .ordered { font-size: 11px; color: #2a9d5c; margin-left: 6px; }
+  .del { background: none; border: none; cursor: pointer; color: #ddd; font-size: 18px; line-height: 1; padding: 0 2px; opacity: 0; transition: opacity .12s; flex-shrink: 0; }
+  .item:hover .del { opacity: 1; }
+  .add-row { display: flex; gap: 6px; margin-top: 8px; }
+  .add-input { flex: 1; font-size: 13px; border: 1px solid #e0e0e0; border-radius: 6px; padding: 6px 10px; background: #fff; color: #111; outline: none; }
+  .add-input:focus { border-color: #aaa; }
+  .add-btn { font-size: 13px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 6px 12px; cursor: pointer; color: #555; white-space: nowrap; }
+  .add-btn:hover { background: #f5f5f5; }
+  .reset-btn { font-size: 13px; background: none; border: 1px solid #e0e0e0; border-radius: 6px; padding: 6px 14px; cursor: pointer; color: #888; margin-top: 8px; }
+  .reset-btn:hover { background: #f5f5f5; }
+  .footer { margin-top: 32px; font-size: 13px; color: #aaa; text-align: center; border-top: 1px solid #eee; padding-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🇬🇧 Party prep checklist</h1>
+  <div class="meta">Sharon & family's citizenship celebration</div>
+  <div class="status loading" id="status">Connecting...</div>
+  <div class="prog-track"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+  <div class="prog-label" id="pl">Loading...</div>
+  <div id="root"></div>
+  <button class="reset-btn" onclick="resetAll()">Uncheck all</button>
+  <div class="footer">You've got this — it's going to be an amazing night! 🎉</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://dkawdrjnejqoeupytquf.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrYXdkcmpuZWpxb2V1cHl0cXVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxNTUsImV4cCI6MjA4OTAwMjE1NX0.BMzYH0Ey1aEiiK8x7W0SLj6Gys9y1EjjQhBcsNPbGzA';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const defaultData = [
+  { title:"🧹 Cleaning plan", groups:[
+    { label:"The day before — living room", items:[
+      {id:"c-1",t:"Hoover / sweep the floor"},{id:"c-2",t:"Wipe down surfaces and coffee table"},
+      {id:"c-3",t:"Clear any clutter — find it a home or bin it"},{id:"c-4",t:"Dust shelves and TV unit"},
+    ]},
+    { label:"The day before — kitchen", items:[
+      {id:"c-5",t:"Clear and wipe down all countertops"},{id:"c-6",t:"Clean the hob and oven if using"},
+      {id:"c-7",t:"Empty the bin and put a fresh bag in"},{id:"c-8",t:"Wipe down the fridge (especially if drinks going in)"},
+      {id:"c-9",t:"Mop the floor"},
+    ]},
+    { label:"The day before — bathroom(s)", items:[
+      {id:"c-10",t:"Clean the toilet (inside and out)"},{id:"c-11",t:"Wipe down the sink and mirror"},
+      {id:"c-12",t:"Mop or wipe the floor"},{id:"c-13",t:"Stock up — extra toilet roll, hand soap, hand towels"},
+      {id:"c-14",t:"Put out a small bin if there isn't one"},
+    ]},
+    { label:"The day before — hallway", items:[
+      {id:"c-15",t:"Hoover"},{id:"c-16",t:"Clear shoes and coats so there's room for guests'"},{id:"c-17",t:"Wipe door handles"},
+    ]},
+    { label:"On the day (quick once-over)", items:[
+      {id:"c-18",t:"Quick hoover of main areas"},{id:"c-19",t:"Empty all bins and put fresh bags in"},
+      {id:"c-20",t:"Wipe kitchen surfaces again after cooking"},
+      {id:"c-21",t:"Light a candle / put on the diffuser"},{id:"c-22",t:"Check soap and loo roll in bathroom"},
+    ]},
+  ]},
+  { title:"🛒 Shopping — food", note:"For 15 people", groups:[
+    { label:"Mains", items:[
+      {id:"f-1",t:"Chicken",n:"Wings/thighs — ~35–40 pieces for 15 people"},
+      {id:"f-2",t:"Jollof rice",n:"Long grain rice — around 1.5–2 kg uncooked"},
+      {id:"f-3",t:"Plantain",n:"8–10 ripe ones — the blacker the sweeter!"},
+    ]},
+    { label:"Sides", store:"Asda", items:[
+      {id:"f-4",t:"Coleslaw"},{id:"f-5",t:"Salad"},
+    ]},
+    { label:"Picky bits (arrival snacks)", store:"Asda + Heathway shop & carry", items:[
+      {id:"f-6",t:"Spring rolls"},{id:"f-7",t:"Tempura prawns"},{id:"f-8",t:"Crisps"},{id:"f-9",t:"Nuts & nibbles"},
+    ]},
+    { label:"Dessert", items:[
+      {id:"f-10",t:"Celebration cake",n:"Maybe one with a British flag on it 🇬🇧"},
+      {id:"f-11",t:"Candles",n:"For the cake!"},{id:"f-12",t:"Cupcakes",n:"Optional but always disappear quickly"},
+    ]},
+    { label:"Store cupboard — check you have these", items:[
+      {id:"f-13",t:"Rice"},{id:"f-14",t:"Cooking oil"},{id:"f-15",t:"Salt, pepper, seasoning / spice mix for chicken"},
+      {id:"f-16",t:"Tin tomatoes / tomato puree (for jollof)"},{id:"f-17",t:"Stock cubes or bouillon"},
+      {id:"f-18",t:"MSG"},{id:"f-19",t:"Butter / olive oil"},{id:"f-20",t:"Foil and cling film"},{id:"f-21",t:"Napkins"},
+    ]},
+  ]},
+  { title:"🍾 Shopping — drinks", note:"Guests are bringing bottles — this is your base layer", groups:[
+    { label:"Alcohol", store:"Aldi / Asda", items:[
+      {id:"d-1",t:"Prosecco",n:"2–3 bottles for the toast"},{id:"d-2",t:"Wine",n:"1 white, 1 red"},{id:"d-3",t:"Spirits",n:"Cheap ones are fine!"},
+    ]},
+    { label:"Soft drinks", items:[
+      {id:"d-4",t:"Coke & Diet Coke",n:"2 x 2L"},{id:"d-5",t:"Lemonade / Sprite",n:"1–2 x 2L"},
+      {id:"d-6",t:"Juice",n:"Orange / tropical / apple — 4 cartons"},{id:"d-7",t:"Still water",n:"2–3 large bottles"},
+    ]},
+    { label:"Don't forget", items:[
+      {id:"d-8",t:"Ice",n:"At least 2 bags"},{id:"d-9",t:"Lemons / limes"},{id:"d-10",t:"Bottle opener & corkscrew"},
+    ]},
+  ]},
+  { title:"🎉 Party supplies & decor", groups:[
+    { label:"Decor", items:[
+      {id:"p-1",t:"Union Jack bunting"},{id:"p-2",t:"Gold or red balloons"},
+    ]},
+    { label:"Serving & tableware", items:[
+      {id:"p-3",t:"Paper plates",n:"At least 20"},{id:"p-4",t:"Napkins — paper, plenty"},{id:"p-5",t:"Plastic / paper cups"},
+      {id:"p-6",t:"Serving spoons and tongs"},{id:"p-7",t:"Foil trays (for keeping food warm)"},
+      {id:"p-8",t:"A big jug or drinks dispenser"},
+    ]},
+    { label:"Bathroom top-up", items:[
+      {id:"p-9",t:"Extra toilet rolls",n:"Minimum 6"},{id:"p-10",t:"Hand soap"},
+      {id:"p-11",t:"Paper hand towels (optional)"},{id:"p-12",t:"Small bin liners"},
+    ]},
+    { label:"Other bits", items:[
+      {id:"p-13",t:"Bin bags",n:"At least 4"},{id:"p-14",t:"Cling film and foil for leftovers"},
+      {id:"p-15",t:"Sticky labels (for the memory jar)"},{id:"p-16",t:"Pens (for quiz + memory jar)"},
+      {id:"p-17",t:"Small cards for the memory jar"},{id:"p-18",t:"A jar or bowl for the memory jar"},
+      {id:"p-19",t:"Prize for the quiz winners 🏆"},
+      {id:"p-20",t:"Polaroid camera & film",n:"Already ordered ✅",ordered:true},
+      {id:"p-21",t:"Film camera",n:"Already ordered ✅",ordered:true},
+    ]},
+  ]},
+];
+
+const allItems = {};
+defaultData.forEach(s => s.groups.forEach(g => g.items.forEach(item => {
+  allItems[item.id] = { ...item, done: false, deleted: false };
+})));
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + type;
+}
+
+function totalActive() { return Object.values(allItems).filter(v => !v.deleted).length; }
+function doneActive() { return Object.values(allItems).filter(v => !v.deleted && v.done).length; }
+
+function updateProg() {
+  const done = doneActive(), tot = totalActive();
+  const pct = tot ? Math.round(done / tot * 100) : 0;
+  document.getElementById('pf').style.width = pct + '%';
+  document.getElementById('pl').textContent = done + ' of ' + tot + ' done' +
+    (done === tot && tot > 0 ? ' — all done, you are SO ready! 🎉' : '');
+}
+
+function applyRow(row) {
+  if (!allItems[row.id]) {
+    // custom item added by the other person — add it in
+    allItems[row.id] = { id: row.id, t: row.text, n: row.note || '', done: row.done, deleted: row.deleted, ordered: false, custom: true };
+    if (!row.deleted) {
+      const root = document.getElementById('root');
+      const lastGroup = root.querySelector('.group:last-of-type');
+      if (lastGroup) {
+        const addRow = lastGroup.querySelector('.add-row');
+        if (addRow) lastGroup.insertBefore(makeItemEl(row.id), addRow);
+      }
+    }
+    updateProg();
+    return;
+  }
+  allItems[row.id].done = row.done;
+  allItems[row.id].deleted = row.deleted;
+  const el = document.getElementById('item-' + row.id);
+  if (el) {
+    el.classList.toggle('checked-item', row.done);
+    const cb = el.querySelector('.cb');
+    if (cb) cb.classList.toggle('checked', row.done);
+    if (row.deleted) el.remove();
+  }
+  updateProg();
+}
+
+async function toggleItem(id) {
+  const item = allItems[id];
+  if (!item) return;
+  const newDone = !item.done;
+  item.done = newDone;
+  const el = document.getElementById('item-' + id);
+  if (el) {
+    el.classList.toggle('checked-item', newDone);
+    const cb = el.querySelector('.cb');
+    if (cb) cb.classList.toggle('checked', newDone);
+  }
+  updateProg();
+  await db.from('checklist').upsert({ id, done: newDone, deleted: item.deleted, text: item.t || item.text, note: item.n || item.note || '' });
+}
+
+async function deleteItem(id) {
+  allItems[id].deleted = true;
+  const el = document.getElementById('item-' + id);
+  if (el) el.remove();
+  updateProg();
+  const item = allItems[id];
+  await db.from('checklist').upsert({ id, done: item.done, deleted: true, text: item.t || item.text, note: item.n || item.note || '' });
+}
+
+async function addItem(si, gi, text) {
+  if (!text.trim()) return;
+  const id = 'custom-' + Date.now();
+  const newItem = { id, t: text.trim(), n: '', done: false, deleted: false, ordered: false };
+  allItems[id] = newItem;
+  defaultData[si].groups[gi].items.push({ id, t: text.trim() });
+  const grpEl = document.getElementById('grp-' + si + '-' + gi);
+  const addRow = grpEl.querySelector('.add-row');
+  grpEl.insertBefore(makeItemEl(id), addRow);
+  updateProg();
+  await db.from('checklist').upsert({ id, done: false, deleted: false, text: text.trim(), note: '' });
+}
+
+async function resetAll() {
+  const updates = [];
+  for (const id of Object.keys(allItems)) {
+    if (!allItems[id].deleted) {
+      allItems[id].done = false;
+      updates.push({ id, done: false, deleted: false, text: allItems[id].t || allItems[id].text, note: allItems[id].n || allItems[id].note || '' });
+    }
+  }
+  document.querySelectorAll('.item').forEach(el => el.classList.remove('checked-item'));
+  document.querySelectorAll('.cb').forEach(cb => cb.classList.remove('checked'));
+  updateProg();
+  if (updates.length) await db.from('checklist').upsert(updates);
+}
+
+function makeItemEl(id) {
+  const item = allItems[id];
+  const div = document.createElement('div');
+  div.className = 'item' + (item.done ? ' checked-item' : '');
+  div.id = 'item-' + id;
+
+  const cb = document.createElement('div');
+  cb.className = 'cb' + (item.done ? ' checked' : '');
+  cb.innerHTML = '<svg width="10" height="7" viewBox="0 0 10 7" fill="none"><path d="M1 3.5L3.5 6 9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  cb.onclick = (e) => { e.stopPropagation(); toggleItem(id); };
+
+  const body = document.createElement('div');
+  body.className = 'item-body';
+  body.onclick = () => toggleItem(id);
+
+  const textEl = document.createElement('div');
+  textEl.className = 'item-text';
+  textEl.textContent = item.t || item.text || '';
+  if (item.ordered) {
+    const badge = document.createElement('span');
+    badge.className = 'ordered';
+    badge.textContent = '✅ ordered';
+    textEl.appendChild(badge);
+  }
+  body.appendChild(textEl);
+
+  const noteText = item.n || item.note || '';
+  if (noteText) {
+    const noteEl = document.createElement('div');
+    noteEl.className = 'item-note';
+    noteEl.textContent = noteText;
+    body.appendChild(noteEl);
+  }
+
+  const del = document.createElement('button');
+  del.className = 'del';
+  del.textContent = '×';
+  del.title = 'Remove';
+  del.onclick = (e) => { e.stopPropagation(); deleteItem(id); };
+
+  div.appendChild(cb);
+  div.appendChild(body);
+  div.appendChild(del);
+  return div;
+}
+
+function render() {
+  const root = document.getElementById('root');
+  root.innerHTML = '';
+  defaultData.forEach((section, si) => {
+    const secEl = document.createElement('div');
+    secEl.className = 'section';
+    const title = document.createElement('div');
+    title.className = 'section-title';
+    title.textContent = section.title;
+    secEl.appendChild(title);
+    if (section.note) {
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:12px;color:#aaa;margin:4px 0 0;';
+      note.textContent = section.note;
+      secEl.appendChild(note);
+    }
+    section.groups.forEach((group, gi) => {
+      const grpEl = document.createElement('div');
+      grpEl.className = 'group';
+      grpEl.id = 'grp-' + si + '-' + gi;
+      const lbl = document.createElement('div');
+      lbl.className = 'group-label';
+      lbl.textContent = group.label;
+      grpEl.appendChild(lbl);
+      if (group.store) {
+        const tag = document.createElement('div');
+        tag.className = 'store-tag';
+        tag.textContent = 'Where to buy: ' + group.store;
+        grpEl.appendChild(tag);
+      }
+      group.items.forEach(item => {
+        if (allItems[item.id] && allItems[item.id].deleted) return;
+        grpEl.appendChild(makeItemEl(item.id));
+      });
+      const addRow = document.createElement('div');
+      addRow.className = 'add-row';
+      const inp = document.createElement('input');
+      inp.className = 'add-input';
+      inp.placeholder = 'Add item...';
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { addItem(si, gi, inp.value); inp.value = ''; } });
+      const btn = document.createElement('button');
+      btn.className = 'add-btn';
+      btn.textContent = '+ Add';
+      btn.onclick = () => { addItem(si, gi, inp.value); inp.value = ''; };
+      addRow.appendChild(inp);
+      addRow.appendChild(btn);
+      grpEl.appendChild(addRow);
+      secEl.appendChild(grpEl);
+    });
+    root.appendChild(secEl);
+  });
+  updateProg();
+}
+
+async function init() {
+  setStatus('Connecting...', 'loading');
+  render();
+
+  const { data, error } = await db.from('checklist').select('*');
+  if (error) {
+    setStatus('Could not connect — changes won\'t sync', 'err');
+  } else {
+    const existingIds = new Set((data || []).map(r => r.id));
+    const toInsert = Object.values(allItems)
+      .filter(item => !existingIds.has(item.id))
+      .map(item => ({ id: item.id, done: false, deleted: false, text: item.t, note: item.n || '' }));
+    if (toInsert.length > 0) await db.from('checklist').insert(toInsert);
+    (data || []).forEach(row => applyRow(row));
+    setStatus('● Live — changes sync with your brother instantly', 'ok');
+  }
+
+  db.channel('checklist-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'checklist' }, payload => {
+      if (payload.new) applyRow(payload.new);
+    })
+    .subscribe(status => {
+      if (status === 'SUBSCRIBED') setStatus('● Live — changes sync with your brother instantly', 'ok');
+      if (status === 'CLOSED') setStatus('Disconnected — reload to reconnect', 'err');
+    });
+}
+
+init();
+</script>
+</body>
+</html>
